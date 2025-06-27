@@ -10,6 +10,7 @@
 
 static constexpr int SCREEN_WIDTH = 1280;
 static constexpr int SCREEN_HEIGHT = 720;
+static constexpr int FPS = 120;
 static constexpr const char* WINDOW_TITLE = "3D Model Viewer";
 static constexpr const char* ASSETS_DIR_PATH = "assets";
 
@@ -29,7 +30,7 @@ std::vector<std::string> get_all_glb_files_in_dir(const std::string& directory) 
 
 int main() {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, WINDOW_TITLE);
-    SetTargetFPS(60);
+    SetTargetFPS(FPS);
 
     // Discover all GLB files in the 'assets' directory
     std::vector<std::string> all_glb_files = get_all_glb_files_in_dir(ASSETS_DIR_PATH);
@@ -61,14 +62,125 @@ int main() {
         bool show_bounding_box{false};
     } model_render_state;
 
+    // Camera and view settings
+    Camera3D camera{
+        .position = Vector3(10.0f, 10.0f, 10.0f),
+        .target = Vector3(0.0f, 0.0f, 0.0f),
+        .up = Vector3(0.0f, 1.0f, 0.0f),
+        .fovy = 45.0f,
+        .projection = CAMERA_PERSPECTIVE
+    };
+
     while (!WindowShouldClose()) {
         // Toggle showing file picker GUI with SPACE
         if (IsKeyPressed(KEY_SPACE)) {
             file_picker_gui_state.is_dialog_visible = !file_picker_gui_state.is_dialog_visible;
         }
 
+        if (model_state.is_model_loaded && !file_picker_gui_state.is_dialog_visible) {
+            UpdateCamera(&camera, CAMERA_ORBITAL);
+
+            // Update model animation
+            if (model_state.animations && model_state.anim_count > 0 && !model_state.anim_paused) {
+                model_state.anim_frame_counter += GetFrameTime() * model_state.anim_speed * 60.0f;
+                if (model_state.anim_frame_counter >= model_state.animations[model_state.current_anim].frameCount) {
+                    model_state.anim_frame_counter = 0.0f;
+                }
+                UpdateModelAnimation(model_state.loaded_model, model_state.animations[model_state.current_anim], int(model_state.anim_frame_counter));
+            }
+
+            // Toggle wireframe mode
+            if (IsKeyPressed(KEY_W)) {
+                model_render_state.show_wireframe = !model_render_state.show_wireframe;
+            }
+            
+            // Toggle bounding box
+            if (IsKeyPressed(KEY_B)) {
+                model_render_state.show_bounding_box = !model_render_state.show_bounding_box;
+            }
+
+            // Toggle animation paused / resumed
+            if (IsKeyPressed(KEY_P) && model_state.animations && model_state.anim_count > 0) {
+                model_state.anim_paused = !model_state.anim_paused;
+            }
+
+            // Switch animations
+            if (IsKeyPressed(KEY_COMMA) && model_state.animations && model_state.anim_count > 0) {
+                model_state.current_anim--;
+                if (model_state.current_anim < 0) {
+                    model_state.current_anim = model_state.anim_count - 1;
+                }
+                model_state.anim_frame_counter = 0.0f;
+            }
+            if (IsKeyPressed(KEY_PERIOD) && model_state.animations && model_state.anim_count > 0) {
+                model_state.current_anim++;
+                if (model_state.current_anim >= int(model_state.anim_count)) {
+                    model_state.current_anim = 0;
+                }
+                model_state.anim_frame_counter = 0.0f;
+            }
+
+            // Animation speed control
+            if (IsKeyDown(KEY_MINUS)) model_state.anim_speed -= 0.01f;
+            if (IsKeyDown(KEY_EQUAL)) model_state.anim_speed += 0.01f;
+            if (model_state.anim_speed < 0.1f) model_state.anim_speed = 0.1f;
+            if (model_state.anim_speed > 3.0f) model_state.anim_speed = 3.0f;
+
+            // Model rotation with keys
+            if (IsKeyDown(KEY_LEFT)) model_render_state.rotation.y -= 2.0f * GetFrameTime();
+            if (IsKeyDown(KEY_RIGHT)) model_render_state.rotation.y += 2.0f * GetFrameTime();
+            if (IsKeyDown(KEY_UP)) model_render_state.rotation.x -= 2.0f * GetFrameTime();
+            if (IsKeyDown(KEY_DOWN)) model_render_state.rotation.x += 2.0f * GetFrameTime();
+        }
+
         BeginDrawing();
-            ClearBackground(DARKGRAY);
+            ClearBackground(RAYWHITE);
+
+            // Render the selected 3D model and animations
+            if (model_state.is_model_loaded && !file_picker_gui_state.is_dialog_visible) {
+                BeginMode3D(camera);
+                    // Draw debug grid
+                    DrawGrid(100, 1.0f);
+
+                    // Apply transformations and draw model
+                    Matrix transform = MatrixIdentity();
+                    transform = MatrixMultiply(transform, MatrixTranslate(model_render_state.position.x, model_render_state.position.y, model_render_state.position.z));
+                    transform = MatrixMultiply(transform, MatrixRotateX(model_render_state.rotation.x));
+                    transform = MatrixMultiply(transform, MatrixRotateY(model_render_state.rotation.y));
+                    transform = MatrixMultiply(transform, MatrixRotateZ(model_render_state.rotation.z));
+                    transform = MatrixMultiply(transform, MatrixScale(model_render_state.scale, model_render_state.scale, model_render_state.scale));
+
+                    if (model_render_state.show_wireframe) {
+                        DrawModelWires(model_state.loaded_model, Vector3Zero(), 1.0f, WHITE);
+                    } else {
+                        DrawModelEx(model_state.loaded_model, Vector3Zero(), Vector3(0.0f, 1.0f, 0.0f), 0.0f, Vector3(model_render_state.scale, model_render_state.scale, model_render_state.scale), WHITE);
+                    }
+
+                    if (model_render_state.show_bounding_box) {
+                        BoundingBox bbox = GetModelBoundingBox(model_state.loaded_model);
+                        DrawBoundingBox(bbox, GREEN);
+                    }
+
+                EndMode3D();
+
+                // UI overlay
+                DrawText("Press SPACE to open file selection", 10, 10, 20, DARKGRAY);
+                DrawText("Use mouse to orbit camera, mouse wheel to zoom", 10, 40, 20, DARKGRAY);
+                DrawText("Arrow keys to rotate model, W for wireframe, B for bounding box", 10, 70, 20, DARKGRAY);
+                if (model_state.animations && model_state.anim_count > 0) {
+                    // Animation UI overlay
+                    DrawText(TextFormat("Animation: %d/%d %s", model_state.current_anim + 1, model_state.anim_count, 
+                        model_state.anim_paused ? "[PAUSED]" : ""), 10, 100, 20, DARKGRAY);
+                    DrawText("P to pause, < > to change animation, -/+ to adjust speed", 10, 130, 20, DARKGRAY);
+                    DrawText(TextFormat("Speed: %.2fx", model_state.anim_speed), 10, 160, 20, DARKGRAY);
+                    
+                    // Animation timeline
+                    DrawRectangle(10, SCREEN_HEIGHT - 40, SCREEN_WIDTH - 20, 20, LIGHTGRAY);
+                    DrawRectangle(10, SCREEN_HEIGHT - 40, 
+                        (int)((model_state.anim_frame_counter / model_state.animations[model_state.current_anim].frameCount) * (SCREEN_WIDTH - 20)), 
+                        20, MAROON);
+                }
+            }
             
             // Draw the file picker GUI when visible
             if (file_picker_gui_state.is_dialog_visible) {
