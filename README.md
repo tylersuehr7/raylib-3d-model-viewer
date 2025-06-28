@@ -1,27 +1,21 @@
 # 3D Model Viewer
 
-A simple 3D model viewer for GLB files built with raylib and raygui.
+A simple 3D model viewer for GLB files that quickly allows you to view / animate / visualize GLB 3D model files for building games with raylib.
 
 ## Features
 
 - File browser to select GLB models from the assets directory
 - 3D model viewing with camera orbit controls
 - Model transformation controls:
-  - Scale with mouse wheel
-  - Rotate with arrow keys
+  - Scale down / up model ('q' key / 'e' key)
+  - Adjusts upright angle ('r' key)
+- Model animation controls:
+  - Switch between animations (',' key / '.' key)
+  - Increase / decrease animation speed ('+' key / '-' key)
 - Display options:
-  - Wireframe mode (W key)
-  - Bounding box display (B key)
-- Simple UI with file selection dialog
-
-## Controls
-
-- **Space**: Toggle file selection dialog
-- **Mouse**: Orbit camera around model
-- **Mouse Wheel**: Zoom in/out (scale model)
-- **Arrow Keys**: Rotate model
-- **W**: Toggle wireframe mode
-- **B**: Toggle bounding box display
+  - Wireframe mode ('w' key)
+  - Bounding box display mode ('b' key)
+  - Toggle file picker ('space' key)
 
 ## Building
 
