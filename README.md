@@ -1,6 +1,6 @@
 # 3D Model Viewer
 
-A simple 3D model viewer for GLB files that quickly allows you to view / animate / visualize GLB 3D model files for building games with raylib.
+Helps you visualize GLB 3D models and animations with raylib for game development.
 
 ## Features
 
