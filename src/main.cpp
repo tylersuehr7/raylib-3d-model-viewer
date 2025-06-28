@@ -64,7 +64,7 @@ int main() {
 
     // Camera and view settings
     Camera3D camera{
-        .position = Vector3(10.0f, 10.0f, 10.0f),
+        .position = Vector3(60.0f, 60.0f, 60.0f),
         .target = Vector3(0.0f, 0.0f, 0.0f),
         .up = Vector3(0.0f, 1.0f, 0.0f),
         .fovy = 45.0f,
@@ -131,6 +131,10 @@ int main() {
             if (IsKeyDown(KEY_RIGHT)) model_render_state.rotation.y += 2.0f * GetFrameTime();
             if (IsKeyDown(KEY_UP)) model_render_state.rotation.x -= 2.0f * GetFrameTime();
             if (IsKeyDown(KEY_DOWN)) model_render_state.rotation.x += 2.0f * GetFrameTime();
+
+            // Model scale control
+            if (IsKeyDown(KEY_Z)) model_render_state.scale -= 0.01f;
+            if (IsKeyDown(KEY_X)) model_render_state.scale += 0.01f;
         }
 
         BeginDrawing();
@@ -141,6 +145,9 @@ int main() {
                 BeginMode3D(camera);
                     // Draw debug grid
                     DrawGrid(100, 1.0f);
+                    DrawLine3D({0,0,0}, {5,0,0}, RED);    // X axis
+                    DrawLine3D({0,0,0}, {0,5,0}, GREEN);  // Y axis
+                    DrawLine3D({0,0,0}, {0,0,5}, BLUE);   // Z axis
 
                     // Apply transformations and draw model
                     Matrix transform = MatrixIdentity();
@@ -153,7 +160,7 @@ int main() {
                     if (model_render_state.show_wireframe) {
                         DrawModelWires(model_state.loaded_model, Vector3Zero(), 1.0f, WHITE);
                     } else {
-                        DrawModelEx(model_state.loaded_model, Vector3Zero(), Vector3(0.0f, 1.0f, 0.0f), 0.0f, Vector3(model_render_state.scale, model_render_state.scale, model_render_state.scale), WHITE);
+                        DrawModelEx(model_state.loaded_model, Vector3Zero(), Vector3(1.0f, 0.0f, 0.0f), 0.0f, Vector3(model_render_state.scale, model_render_state.scale, model_render_state.scale), WHITE);
                     }
 
                     if (model_render_state.show_bounding_box) {
